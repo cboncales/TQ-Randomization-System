@@ -1,26 +1,33 @@
-import { HomePage } from "@/views/HomePage.vue";
+import HomePage from "@/views/HomePage.vue";
 
 export const routes = [
-  // Auth Pages
+  // Home Page
   {
     path: "/",
     name: "home",
+    component: HomePage,
+    meta: { requiresAuth: false },
   },
   {
     path: "/login",
     name: "login",
-    component: HomePage,
+    component: HomePage, // Temporarily using HomePage - you'll want to create a proper login component
     meta: { requiresAuth: false },
   },
 
-  // Error Pages
+  // Error Pages - You'll need to create these components
   {
     path: "/forbidden",
     name: "forbidden",
-    component: ForbiddenView,
+    component: () => import("@/views/errors/ForbiddenView.vue"),
+  },
+  {
+    path: "/not-found",
+    name: "not-found",
+    component: () => import("@/views/errors/NotFoundView.vue"),
   },
   {
     path: "/:catchAll(.*)",
-    component: NotFoundView,
+    component: () => import("@/views/errors/NotFoundView.vue"),
   },
 ];
