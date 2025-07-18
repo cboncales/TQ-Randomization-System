@@ -1,5 +1,6 @@
 <script setup>
 import { ref } from "vue";
+import { useAuthUserStore } from "@/stores/authUser";
 
 const props = defineProps({
   isOpen: {
@@ -10,9 +11,13 @@ const props = defineProps({
 
 const emit = defineEmits(["close", "test-created"]);
 
+const authStore = useAuthUserStore();
+
 const title = ref("");
 const subject = ref("");
 const description = ref("");
+const isLoading = ref(false);
+const errorMessage = ref("");
 
 const predefinedSubjects = [
   "Mathematics",
@@ -30,25 +35,47 @@ const predefinedSubjects = [
   "Other",
 ];
 
-const handleSubmit = () => {
+const handleSubmit = async () => {
   if (!title.value.trim() || !subject.value.trim()) {
+    errorMessage.value = "Please fill in both title and subject";
     return;
   }
 
-  const newTest = {
-    title: title.value.trim(),
-    subject: subject.value.trim(),
-    description: description.value.trim() || "No description provided",
-  };
+  isLoading.value = true;
+  errorMessage.value = "";
 
-  emit("test-created", newTest);
-  resetForm();
+  try {
+    // Combine subject and description since database doesn't have separate subject field
+    const fullDescription =
+      subject.value.trim() +
+      (description.value.trim() ? ` - ${description.value.trim()}` : "");
+
+    const result = await authStore.createTest(title.value, fullDescription);
+
+    if (result.error) {
+      errorMessage.value = result.error;
+    } else {
+      emit("test-created", {
+        ...result.data,
+        subject: subject.value.trim(), // Keep subject for UI display
+        questionCount: 0,
+        status: "draft",
+      });
+      resetForm();
+    }
+  } catch (error) {
+    errorMessage.value = "An unexpected error occurred. Please try again.";
+    console.error("Create test error:", error);
+  } finally {
+    isLoading.value = false;
+  }
 };
 
 const resetForm = () => {
   title.value = "";
   subject.value = "";
   description.value = "";
+  errorMessage.value = "";
 };
 
 const closeModal = () => {
@@ -89,6 +116,31 @@ const closeModal = () => {
         </button>
       </div>
 
+      <!-- Error Message -->
+      <div
+        v-if="errorMessage"
+        class="bg-red-50 border border-red-200 rounded-md p-4 mb-4"
+      >
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg
+              class="h-5 w-5 text-red-400"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-red-800">{{ errorMessage }}</p>
+          </div>
+        </div>
+      </div>
+
       <!-- Modal body -->
       <form @submit.prevent="handleSubmit" class="space-y-4">
         <!-- Test Title -->
@@ -104,7 +156,8 @@ const closeModal = () => {
             v-model="title"
             type="text"
             required
-            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            :disabled="isLoading"
+            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
             placeholder="Enter test title"
           />
         </div>
@@ -121,7 +174,8 @@ const closeModal = () => {
             id="test-subject"
             v-model="subject"
             required
-            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            :disabled="isLoading"
+            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
           >
             <option value="">Select a subject</option>
             <option
@@ -147,7 +201,8 @@ const closeModal = () => {
             v-model="subject"
             type="text"
             required
-            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            :disabled="isLoading"
+            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
             placeholder="Enter custom subject"
           />
         </div>
@@ -164,7 +219,8 @@ const closeModal = () => {
             id="test-description"
             v-model="description"
             rows="3"
-            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            :disabled="isLoading"
+            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
             placeholder="Enter test description (optional)"
           />
           <p class="mt-1 text-xs text-gray-500">
@@ -177,19 +233,39 @@ const closeModal = () => {
           <button
             type="button"
             @click="closeModal"
-            class="bg-gray-300 text-gray-700 hover:bg-gray-400 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+            :disabled="isLoading"
+            class="bg-gray-300 text-gray-700 hover:bg-gray-400 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button
             type="submit"
             class="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center"
-            :disabled="!title.trim() || !subject.trim()"
+            :disabled="!title.trim() || !subject.trim() || isLoading"
             :class="{
-              'opacity-50 cursor-not-allowed': !title.trim() || !subject.trim(),
+              'opacity-50 cursor-not-allowed':
+                !title.trim() || !subject.trim() || isLoading,
             }"
           >
+            <span v-if="isLoading" class="w-4 h-4 mr-2 animate-spin">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                ></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+            </span>
             <svg
+              v-else
               class="w-4 h-4 mr-2"
               fill="none"
               stroke="currentColor"
@@ -202,7 +278,7 @@ const closeModal = () => {
                 d="M12 6v6m0 0v6m0-6h6m-6 0H6"
               />
             </svg>
-            Create Test
+            {{ isLoading ? "Creating..." : "Create Test" }}
           </button>
         </div>
       </form>
