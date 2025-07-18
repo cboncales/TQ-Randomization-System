@@ -39,7 +39,7 @@ const handleLogin = async () => {
     if (result.error) {
       errorMessage.value = result.error;
     } else {
-      successMessage.value = "Login successful! Redirecting to dashboard...";
+      successMessage.value = "Login successful!";
       // Redirect to dashboard after successful login
       setTimeout(() => {
         router.push("/dashboard");

@@ -222,6 +222,108 @@ export const useAuthUserStore = defineStore("authUser", () => {
     }
   }
 
+  // Test Management Functions
+
+  // Create a new test
+  async function createTest(title, description) {
+    try {
+      if (!userData.value?.id) {
+        return { error: "User not authenticated" };
+      }
+
+      const { data, error } = await supabase
+        .from("tests")
+        .insert([
+          {
+            user_id: userData.value.id,
+            title: title.trim(),
+            description: description.trim() || null,
+          },
+        ])
+        .select()
+        .single();
+
+      if (error) {
+        return { error: error.message };
+      }
+
+      return { data };
+    } catch (error) {
+      return { error: error.message };
+    }
+  }
+
+  // Get user's tests
+  async function getUserTests() {
+    try {
+      if (!userData.value?.id) {
+        return { error: "User not authenticated" };
+      }
+
+      const { data, error } = await supabase
+        .from("tests")
+        .select("*")
+        .eq("user_id", userData.value.id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        return { error: error.message };
+      }
+
+      return { data };
+    } catch (error) {
+      return { error: error.message };
+    }
+  }
+
+  // Delete a test
+  async function deleteTest(testId) {
+    try {
+      if (!userData.value?.id) {
+        return { error: "User not authenticated" };
+      }
+
+      const { error } = await supabase
+        .from("tests")
+        .delete()
+        .eq("id", testId)
+        .eq("user_id", userData.value.id); // Ensure user owns the test
+
+      if (error) {
+        return { error: error.message };
+      }
+
+      return { success: true };
+    } catch (error) {
+      return { error: error.message };
+    }
+  }
+
+  // Update a test
+  async function updateTest(testId, updates) {
+    try {
+      if (!userData.value?.id) {
+        return { error: "User not authenticated" };
+      }
+
+      const { data, error } = await supabase
+        .from("tests")
+        .update(updates)
+        .eq("id", testId)
+        .eq("user_id", userData.value.id) // Ensure user owns the test
+        .select()
+        .single();
+
+      if (error) {
+        return { error: error.message };
+      }
+
+      return { data };
+    } catch (error) {
+      return { error: error.message };
+    }
+  }
+
   return {
     userData,
     userRole,
@@ -237,5 +339,10 @@ export const useAuthUserStore = defineStore("authUser", () => {
     logout,
     signInWithGoogle,
     resetPassword,
+    // Test management functions
+    createTest,
+    getUserTests,
+    deleteTest,
+    updateTest,
   };
 });

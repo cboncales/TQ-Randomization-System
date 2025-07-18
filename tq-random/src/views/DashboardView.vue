@@ -2,29 +2,15 @@
 import AppLayout from "@/components/layout/AppLayout.vue";
 import TestList from "@/components/dashboard/TestList.vue";
 import CreateTestModal from "@/components/dashboard/CreateTestModal.vue";
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
+import { useAuthUserStore } from "@/stores/authUser";
+
+const authStore = useAuthUserStore();
 
 const showCreateModal = ref(false);
-const tests = ref([
-  {
-    id: 1,
-    title: "Mathematics Quiz",
-    subject: "Mathematics",
-    description: "Basic algebra and geometry questions",
-    questionCount: 15,
-    createdAt: "2024-01-15",
-    status: "active",
-  },
-  {
-    id: 2,
-    title: "Science Test",
-    subject: "Science",
-    description: "General science knowledge test",
-    questionCount: 20,
-    createdAt: "2024-01-10",
-    status: "draft",
-  },
-]);
+const tests = ref([]);
+const isLoading = ref(true);
+const errorMessage = ref("");
 
 const openCreateModal = () => {
   showCreateModal.value = true;
@@ -37,17 +23,60 @@ const closeCreateModal = () => {
 const handleTestCreated = (newTest) => {
   tests.value.unshift({
     ...newTest,
-    id: Date.now(),
-    questionCount: 0,
-    createdAt: new Date().toISOString().split("T")[0],
+    questionCount: 0, // TODO: Get actual question count
     status: "draft",
   });
   closeCreateModal();
 };
 
-const handleTestDeleted = (testId) => {
-  tests.value = tests.value.filter((test) => test.id !== testId);
+const handleTestDeleted = async (testId) => {
+  try {
+    const result = await authStore.deleteTest(testId);
+
+    if (result.error) {
+      alert(`Error deleting test: ${result.error}`);
+    } else {
+      tests.value = tests.value.filter((test) => test.id !== testId);
+    }
+  } catch (error) {
+    alert("An unexpected error occurred while deleting the test.");
+    console.error("Delete test error:", error);
+  }
 };
+
+const loadTests = async () => {
+  try {
+    isLoading.value = true;
+    errorMessage.value = "";
+
+    const result = await authStore.getUserTests();
+
+    if (result.error) {
+      errorMessage.value = result.error;
+    } else {
+      // Transform the database data to match UI expectations
+      tests.value = result.data.map((test) => ({
+        ...test,
+        subject: test.description?.split(" - ")[0] || "General", // Extract subject from description
+        description: test.description?.includes(" - ")
+          ? test.description.split(" - ").slice(1).join(" - ")
+          : test.description || "",
+        questionCount: 0, // TODO: Get actual question count from questions table
+        status: "draft", // TODO: Add status field to database or determine from data
+        createdAt: new Date(test.created_at).toLocaleDateString(),
+      }));
+    }
+  } catch (error) {
+    errorMessage.value = "Failed to load tests. Please try again.";
+    console.error("Load tests error:", error);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+onMounted(() => {
+  loadTests();
+});
 </script>
 
 <template>
@@ -224,8 +253,69 @@ const handleTestDeleted = (testId) => {
           </div>
         </div>
 
+        <!-- Error Message -->
+        <div
+          v-if="errorMessage"
+          class="bg-red-50 border border-red-200 rounded-lg p-6 mb-8"
+        >
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg
+                class="h-5 w-5 text-red-400"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-red-800">{{ errorMessage }}</p>
+              <button
+                @click="loadTests"
+                class="mt-2 text-sm text-red-600 hover:text-red-500 underline"
+              >
+                Try again
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading State -->
+        <div v-if="isLoading" class="flex items-center justify-center py-12">
+          <div class="flex items-center space-x-2">
+            <svg
+              class="animate-spin h-5 w-5 text-blue-600"
+              fill="none"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                class="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                stroke-width="4"
+              ></circle>
+              <path
+                class="opacity-75"
+                fill="currentColor"
+                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+              ></path>
+            </svg>
+            <span class="text-gray-600">Loading your tests...</span>
+          </div>
+        </div>
+
         <!-- Test List -->
-        <TestList :tests="tests" @test-deleted="handleTestDeleted" />
+        <TestList
+          v-if="!isLoading"
+          :tests="tests"
+          @test-deleted="handleTestDeleted"
+        />
       </div>
 
       <!-- Create Test Modal -->
