@@ -36,6 +36,12 @@ const navigateTo = (routeName) => {
                 Home
               </button>
               <button
+                @click="navigateTo('dashboard')"
+                class="text-gray-800 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+              >
+                Dashboard
+              </button>
+              <button
                 @click="navigateTo('login')"
                 class="text-gray-800 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
               >
@@ -93,12 +99,19 @@ const navigateTo = (routeName) => {
               Home
             </button>
             <button
+              @click="navigateTo('dashboard')"
+              class="text-gray-800 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium w-full text-left transition-colors duration-200"
+            >
+              Dashboard
+            </button>
+            <button
               @click="navigateTo('login')"
               class="text-gray-800 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium w-full text-left transition-colors duration-200"
             >
               Login
             </button>
             <button
+              @click="navigateTo('register')"
               class="bg-blue-600 text-white hover:bg-blue-700 block px-3 py-2 rounded-md text-base font-medium w-full text-left transition-colors duration-200"
             >
               Get Started

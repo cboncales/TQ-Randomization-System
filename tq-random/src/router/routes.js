@@ -21,7 +21,27 @@ export const routes = [
     meta: { requiresAuth: false },
   },
 
-  // Error Pages - You'll need to create these components
+  // Dashboard Routes (Protected)
+  {
+    path: "/dashboard",
+    name: "dashboard",
+    component: () => import("@/views/DashboardView.vue"),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: "/dashboard/test/:testId/questions",
+    name: "question-management",
+    component: () => import("@/views/QuestionManagementView.vue"),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: "/dashboard/test/:testId/edit",
+    name: "edit-test",
+    component: () => import("@/views/auth/LoginView.vue"), // Placeholder - create EditTestView later
+    meta: { requiresAuth: false },
+  },
+
+  // Error Pages
   {
     path: "/forbidden",
     name: "forbidden",
