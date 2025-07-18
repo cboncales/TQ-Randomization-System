@@ -10,9 +10,15 @@ const props = defineProps({
     type: Object,
     default: null,
   },
+  isLoading: {
+    type: Boolean,
+    default: false,
+  },
 });
 
 const emit = defineEmits(["close", "question-saved"]);
+
+const errorMessage = ref("");
 
 // Form data
 const questionText = ref("");
@@ -25,6 +31,21 @@ const options = ref([
 ]);
 const paraphrases = ref([]);
 const newParaphrase = ref("");
+
+// Reset form function
+const resetForm = () => {
+  questionText.value = "";
+  questionType.value = "multiple-choice";
+  options.value = [
+    { id: 1, text: "", isCorrect: false },
+    { id: 2, text: "", isCorrect: false },
+    { id: 3, text: "", isCorrect: false },
+    { id: 4, text: "", isCorrect: false },
+  ];
+  paraphrases.value = [];
+  newParaphrase.value = "";
+  errorMessage.value = "";
+};
 
 // Watch for editing question changes
 watch(
@@ -76,22 +97,25 @@ const removeParaphrase = (index) => {
 };
 
 const handleSubmit = () => {
+  // Clear previous errors
+  errorMessage.value = "";
+
   // Validation
   if (!questionText.value.trim()) {
-    alert("Please enter a question");
+    errorMessage.value = "Please enter a question";
     return;
   }
 
   if (questionType.value === "multiple-choice") {
     const filledOptions = options.value.filter((opt) => opt.text.trim());
     if (filledOptions.length < 2) {
-      alert("Please provide at least 2 answer options");
+      errorMessage.value = "Please provide at least 2 answer options";
       return;
     }
 
     const correctAnswers = filledOptions.filter((opt) => opt.isCorrect);
     if (correctAnswers.length === 0) {
-      alert("Please mark at least one correct answer");
+      errorMessage.value = "Please mark at least one correct answer";
       return;
     }
   }
@@ -108,19 +132,6 @@ const handleSubmit = () => {
   };
 
   emit("question-saved", questionData);
-};
-
-const resetForm = () => {
-  questionText.value = "";
-  questionType.value = "multiple-choice";
-  options.value = [
-    { id: 1, text: "", isCorrect: false },
-    { id: 2, text: "", isCorrect: false },
-    { id: 3, text: "", isCorrect: false },
-    { id: 4, text: "", isCorrect: false },
-  ];
-  paraphrases.value = [];
-  newParaphrase.value = "";
 };
 
 const closeModal = () => {
@@ -149,7 +160,11 @@ const hasCorrectAnswer = () => {
         <h3 class="text-lg font-medium text-gray-900">
           {{ editingQuestion ? "Edit Question" : "Add New Question" }}
         </h3>
-        <button @click="closeModal" class="text-gray-400 hover:text-gray-600">
+        <button
+          @click="closeModal"
+          :disabled="props.isLoading"
+          class="text-gray-400 hover:text-gray-600 disabled:cursor-not-allowed"
+        >
           <svg
             class="w-6 h-6"
             fill="none"
@@ -164,6 +179,31 @@ const hasCorrectAnswer = () => {
             />
           </svg>
         </button>
+      </div>
+
+      <!-- Error Message -->
+      <div
+        v-if="errorMessage"
+        class="bg-red-50 border border-red-200 rounded-md p-4 mb-6"
+      >
+        <div class="flex">
+          <div class="flex-shrink-0">
+            <svg
+              class="h-5 w-5 text-red-400"
+              fill="currentColor"
+              viewBox="0 0 20 20"
+            >
+              <path
+                fill-rule="evenodd"
+                d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                clip-rule="evenodd"
+              />
+            </svg>
+          </div>
+          <div class="ml-3">
+            <p class="text-sm text-red-800">{{ errorMessage }}</p>
+          </div>
+        </div>
       </div>
 
       <!-- Form -->
@@ -181,7 +221,8 @@ const hasCorrectAnswer = () => {
             v-model="questionText"
             rows="3"
             required
-            class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+            :disabled="props.isLoading"
+            class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
             placeholder="Enter your question here..."
           />
         </div>
@@ -365,15 +406,35 @@ const hasCorrectAnswer = () => {
           <button
             type="button"
             @click="closeModal"
-            class="bg-gray-300 text-gray-700 hover:bg-gray-400 px-6 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+            :disabled="props.isLoading"
+            class="bg-gray-300 text-gray-700 hover:bg-gray-400 px-6 py-2 rounded-md text-sm font-medium transition-colors duration-200 disabled:cursor-not-allowed"
           >
             Cancel
           </button>
           <button
             type="submit"
-            class="bg-blue-600 text-white hover:bg-blue-700 px-6 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center"
+            :disabled="props.isLoading"
+            class="bg-blue-600 text-white hover:bg-blue-700 px-6 py-2 rounded-md text-sm font-medium transition-colors duration-200 flex items-center disabled:bg-gray-400 disabled:cursor-not-allowed"
           >
+            <span v-if="props.isLoading" class="w-4 h-4 mr-2 animate-spin">
+              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24">
+                <circle
+                  class="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  stroke-width="4"
+                ></circle>
+                <path
+                  class="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+            </span>
             <svg
+              v-else
               class="w-4 h-4 mr-2"
               fill="none"
               stroke="currentColor"
@@ -386,7 +447,15 @@ const hasCorrectAnswer = () => {
                 d="M5 13l4 4L19 7"
               />
             </svg>
-            {{ editingQuestion ? "Update Question" : "Save Question" }}
+            {{
+              props.isLoading
+                ? editingQuestion
+                  ? "Updating..."
+                  : "Saving..."
+                : editingQuestion
+                ? "Update Question"
+                : "Save Question"
+            }}
           </button>
         </div>
       </form>
