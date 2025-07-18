@@ -11,11 +11,37 @@ export const routes = [
   {
     path: "/login",
     name: "login",
-    component: HomePage, // Temporarily using HomePage - you'll want to create a proper login component
+    component: () => import("@/views/auth/LoginView.vue"),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: "/register",
+    name: "register",
+    component: () => import("@/views/auth/RegisterView.vue"),
     meta: { requiresAuth: false },
   },
 
-  // Error Pages - You'll need to create these components
+  // Dashboard Routes (Protected)
+  {
+    path: "/dashboard",
+    name: "dashboard",
+    component: () => import("@/views/DashboardView.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/dashboard/test/:testId/questions",
+    name: "question-management",
+    component: () => import("@/views/QuestionManagementView.vue"),
+    meta: { requiresAuth: true },
+  },
+  {
+    path: "/dashboard/test/:testId/edit",
+    name: "edit-test",
+    component: () => import("@/views/auth/LoginView.vue"), // Placeholder - create EditTestView later
+    meta: { requiresAuth: true },
+  },
+
+  // Error Pages
   {
     path: "/forbidden",
     name: "forbidden",

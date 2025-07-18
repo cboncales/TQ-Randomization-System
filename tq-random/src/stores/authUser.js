@@ -121,6 +121,107 @@ export const useAuthUserStore = defineStore("authUser", () => {
     }
   }
 
+  // Login function
+  async function login(email, password) {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        return { error: error.message };
+      }
+
+      if (data.user) {
+        const { id, email: userEmail, user_metadata } = data.user;
+        userData.value = { id, email: userEmail, ...user_metadata };
+        return { data: userData.value };
+      }
+    } catch (error) {
+      return { error: error.message };
+    }
+  }
+
+  // Register function
+  async function register(email, password, firstName, lastName) {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            first_name: firstName,
+            last_name: lastName,
+            full_name: `${firstName} ${lastName}`,
+          },
+        },
+      });
+
+      if (error) {
+        return { error: error.message };
+      }
+
+      return { data: data.user };
+    } catch (error) {
+      return { error: error.message };
+    }
+  }
+
+  // Logout function
+  async function logout() {
+    try {
+      const { error } = await supabase.auth.signOut();
+
+      if (error) {
+        return { error: error.message };
+      }
+
+      // Reset the store
+      $reset();
+      return { success: true };
+    } catch (error) {
+      return { error: error.message };
+    }
+  }
+
+  // Google Sign In
+  async function signInWithGoogle() {
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/dashboard`,
+        },
+      });
+
+      if (error) {
+        return { error: error.message };
+      }
+
+      return { data };
+    } catch (error) {
+      return { error: error.message };
+    }
+  }
+
+  // Reset Password
+  async function resetPassword(email) {
+    try {
+      const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+
+      if (error) {
+        return { error: error.message };
+      }
+
+      return { data };
+    } catch (error) {
+      return { error: error.message };
+    }
+  }
+
   return {
     userData,
     userRole,
@@ -131,5 +232,10 @@ export const useAuthUserStore = defineStore("authUser", () => {
     getAuthPages,
     updateUserInformation,
     updateUserImage,
+    login,
+    register,
+    logout,
+    signInWithGoogle,
+    resetPassword,
   };
 });

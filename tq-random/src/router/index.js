@@ -17,19 +17,27 @@ router.beforeEach(async (to) => {
   const authUser = useAuthUserStore();
   const isLoggedIn = await authUser.isAuthenticated();
 
-  // Redirect to appropriate page if accessing home route
-  if (to.name === "home") {
-    return isLoggedIn ? { name: "dashboard" } : { name: "login" };
+  // If logged in and trying to access auth pages or home, redirect to dashboard
+  if (
+    isLoggedIn &&
+    (to.name === "login" || to.name === "register" || to.name === "home")
+  ) {
+    return { name: "dashboard" };
   }
 
-  // Allow public access to FoodPage and ContactPage regardless of login status
-  if (to.name === "food" || to.name === "contact") {
+  // Allow public access to home page only if not logged in
+  if (to.name === "home") {
     return true;
   }
 
-  // If logged in, redirect to dashboard when accessing login page
-  if (isLoggedIn && !to.meta.requiresAuth) {
-    return { name: "dashboard" };
+  // Allow access to auth pages if not logged in
+  if (to.name === "login" || to.name === "register") {
+    return true;
+  }
+
+  // Allow public access to other public pages
+  if (to.name === "food" || to.name === "contact") {
+    return true;
   }
 
   // If not logged in and trying to access protected routes
