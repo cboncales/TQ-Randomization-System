@@ -1,6 +1,11 @@
 <script setup>
 import AppLayout from "@/components/layout/AppLayout.vue";
 import { ref } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthUserStore } from "@/stores/authUser";
+
+const router = useRouter();
+const authStore = useAuthUserStore();
 
 const firstName = ref("");
 const lastName = ref("");
@@ -8,23 +13,171 @@ const email = ref("");
 const password = ref("");
 const confirmPassword = ref("");
 const agreeToTerms = ref(false);
+const isLoading = ref(false);
+const errorMessage = ref("");
+const successMessage = ref("");
 
-// Placeholder functions for form handling
-const handleRegister = () => {
-  console.log("Register form submitted:", {
-    firstName: firstName.value,
-    lastName: lastName.value,
-    email: email.value,
-    password: password.value,
-    confirmPassword: confirmPassword.value,
-    agreeToTerms: agreeToTerms.value,
-  });
-  // Add registration functionality here later
+// Handle registration form submission
+const handleRegister = async () => {
+  // Clear previous messages
+  errorMessage.value = "";
+  successMessage.value = "";
+
+  // Validate form
+  if (
+    !firstName.value.trim() ||
+    !lastName.value.trim() ||
+    !email.value.trim() ||
+    !password.value.trim() ||
+    !confirmPassword.value.trim()
+  ) {
+    errorMessage.value = "Please fill in all required fields";
+    return;
+  }
+
+  if (!isValidEmail(email.value)) {
+    errorMessage.value = "Please enter a valid email address";
+    return;
+  }
+
+  if (password.value.length < 6) {
+    errorMessage.value = "Password must be at least 6 characters long";
+    return;
+  }
+
+  if (password.value !== confirmPassword.value) {
+    errorMessage.value = "Passwords do not match";
+    return;
+  }
+
+  if (!agreeToTerms.value) {
+    errorMessage.value = "Please agree to the Terms and Conditions";
+    return;
+  }
+
+  isLoading.value = true;
+
+  try {
+    // Capitalize names before sending to Supabase
+    const formattedFirstName = capitalizeWords(firstName.value.trim());
+    const formattedLastName = capitalizeWords(lastName.value.trim());
+
+    const result = await authStore.register(
+      email.value.trim(),
+      password.value,
+      formattedFirstName,
+      formattedLastName
+    );
+
+    if (result.error) {
+      errorMessage.value = result.error;
+    } else {
+      successMessage.value = "Account created successfully! Logging you in...";
+      // Reset form after successful registration
+      resetForm();
+
+      // Auto-login after successful registration
+      setTimeout(async () => {
+        try {
+          const loginResult = await authStore.login(
+            email.value.trim(),
+            password.value
+          );
+
+          if (loginResult.error) {
+            // If auto-login fails, just redirect to login with success message
+            successMessage.value =
+              "Redirecting to login...";
+            setTimeout(() => {
+              router.push("/login");
+            }, 1500);
+          } else {
+            successMessage.value =
+              "Registration successful! Redirecting to dashboard...";
+            setTimeout(() => {
+              router.push("/dashboard");
+            }, 1000);
+          }
+        } catch (loginError) {
+          // If auto-login fails, just redirect to login with success message
+          successMessage.value =
+            "Redirecting to login...";
+          setTimeout(() => {
+            router.push("/login");
+          }, 1500);
+        }
+      }, 1000);
+    }
+  } catch (error) {
+    errorMessage.value = "An unexpected error occurred. Please try again.";
+    console.error("Registration error:", error);
+  } finally {
+    isLoading.value = false;
+  }
 };
 
-const handleGoogleRegister = () => {
-  console.log("Google register clicked");
-  // Add Google registration functionality here later
+// Handle Google registration
+const handleGoogleRegister = async () => {
+  errorMessage.value = "";
+  isLoading.value = true;
+
+  try {
+    const result = await authStore.signInWithGoogle();
+
+    if (result.error) {
+      errorMessage.value = result.error;
+    }
+    // Google OAuth will handle the redirect automatically
+  } catch (error) {
+    errorMessage.value = "Failed to sign up with Google. Please try again.";
+    console.error("Google registration error:", error);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// Email validation helper
+const isValidEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
+};
+
+// Reset form function
+const resetForm = () => {
+  firstName.value = "";
+  lastName.value = "";
+  email.value = "";
+  password.value = "";
+  confirmPassword.value = "";
+  agreeToTerms.value = false;
+};
+
+// Password strength indicator
+const getPasswordStrength = () => {
+  const pass = password.value;
+  if (pass.length === 0) return { strength: 0, label: "", color: "" };
+  if (pass.length < 6)
+    return { strength: 1, label: "Too short", color: "text-red-600" };
+  if (pass.length < 8)
+    return { strength: 2, label: "Weak", color: "text-orange-600" };
+  if (pass.length < 12 && /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(pass))
+    return { strength: 3, label: "Good", color: "text-yellow-600" };
+  if (
+    pass.length >= 12 &&
+    /(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])/.test(pass)
+  )
+    return { strength: 4, label: "Strong", color: "text-green-600" };
+  return { strength: 2, label: "Weak", color: "text-orange-600" };
+};
+
+// Capitalize first letter of each word
+const capitalizeWords = (str) => {
+  return str
+    .toLowerCase()
+    .split(" ")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(" ")
+    .trim();
 };
 </script>
 
@@ -66,6 +219,56 @@ const handleGoogleRegister = () => {
           </p>
         </div>
 
+        <!-- Error Message -->
+        <div
+          v-if="errorMessage"
+          class="bg-red-50 border border-red-200 rounded-md p-4"
+        >
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg
+                class="h-5 w-5 text-red-400"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-red-800">{{ errorMessage }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success Message -->
+        <div
+          v-if="successMessage"
+          class="bg-green-50 border border-green-200 rounded-md p-4"
+        >
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg
+                class="h-5 w-5 text-green-400"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-green-800">{{ successMessage }}</p>
+            </div>
+          </div>
+        </div>
+
         <form class="mt-8 space-y-6" @submit.prevent="handleRegister">
           <div class="space-y-4">
             <div class="grid grid-cols-2 gap-4">
@@ -82,7 +285,9 @@ const handleGoogleRegister = () => {
                   type="text"
                   autocomplete="given-name"
                   required
-                  class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  :disabled="isLoading"
+                  @blur="firstName = capitalizeWords(firstName)"
+                  class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                   placeholder="First name"
                 />
               </div>
@@ -99,7 +304,9 @@ const handleGoogleRegister = () => {
                   type="text"
                   autocomplete="family-name"
                   required
-                  class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                  :disabled="isLoading"
+                  @blur="lastName = capitalizeWords(lastName)"
+                  class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                   placeholder="Last name"
                 />
               </div>
@@ -116,7 +323,8 @@ const handleGoogleRegister = () => {
                 type="email"
                 autocomplete="email"
                 required
-                class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                :disabled="isLoading"
+                class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="Enter your email"
               />
             </div>
@@ -134,9 +342,18 @@ const handleGoogleRegister = () => {
                 type="password"
                 autocomplete="new-password"
                 required
-                class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                :disabled="isLoading"
+                class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="Create a password"
               />
+              <!-- Password Strength Indicator -->
+              <div
+                v-if="password"
+                class="mt-1 text-xs"
+                :class="getPasswordStrength().color"
+              >
+                {{ getPasswordStrength().label }}
+              </div>
             </div>
 
             <div>
@@ -152,20 +369,35 @@ const handleGoogleRegister = () => {
                 type="password"
                 autocomplete="new-password"
                 required
-                class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                :disabled="isLoading"
+                class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="Confirm your password"
               />
+              <!-- Password Match Indicator -->
+              <div
+                v-if="confirmPassword && password !== confirmPassword"
+                class="mt-1 text-xs text-red-600"
+              >
+                Passwords do not match
+              </div>
+              <div
+                v-else-if="confirmPassword && password === confirmPassword"
+                class="mt-1 text-xs text-green-600"
+              >
+                Passwords match
+              </div>
             </div>
           </div>
 
-          <div class="flex items-center">
+          <div class="flex items-start">
             <input
               id="agree-terms"
               v-model="agreeToTerms"
               name="agree-terms"
               type="checkbox"
               required
-              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              :disabled="isLoading"
+              class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded mt-1 disabled:cursor-not-allowed"
             />
             <label for="agree-terms" class="ml-2 block text-sm text-gray-900">
               I agree to the
@@ -182,9 +414,37 @@ const handleGoogleRegister = () => {
           <div class="space-y-4">
             <button
               type="submit"
-              class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+              :disabled="isLoading || !agreeToTerms"
+              class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+              <span
+                v-if="isLoading"
+                class="absolute left-0 inset-y-0 flex items-center pl-3"
+              >
+                <svg
+                  class="h-5 w-5 text-blue-300 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+              </span>
+              <span
+                v-else
+                class="absolute left-0 inset-y-0 flex items-center pl-3"
+              >
                 <svg
                   class="h-5 w-5 text-blue-500 group-hover:text-blue-400"
                   fill="none"
@@ -199,7 +459,7 @@ const handleGoogleRegister = () => {
                   />
                 </svg>
               </span>
-              Create account
+              {{ isLoading ? "Creating account..." : "Create account" }}
             </button>
 
             <div class="relative">
@@ -216,7 +476,8 @@ const handleGoogleRegister = () => {
             <button
               type="button"
               @click="handleGoogleRegister"
-              class="w-full flex justify-center items-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors duration-200"
+              :disabled="isLoading"
+              class="w-full flex justify-center items-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
               <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path
@@ -236,7 +497,7 @@ const handleGoogleRegister = () => {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              Sign up with Google
+              {{ isLoading ? "Loading..." : "Sign up with Google" }}
             </button>
           </div>
         </form>

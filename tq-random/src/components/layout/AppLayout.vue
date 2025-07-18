@@ -1,9 +1,13 @@
 <script setup>
-import { ref } from "vue";
+import { ref, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { useAuthUserStore } from "@/stores/authUser";
 
 const router = useRouter();
+const authStore = useAuthUserStore();
 const isMenuOpen = ref(false);
+const isAuthenticated = ref(false);
+const userData = ref(null);
 
 const toggleMenu = () => {
   isMenuOpen.value = !isMenuOpen.value;
@@ -13,6 +17,38 @@ const navigateTo = (routeName) => {
   router.push({ name: routeName });
   isMenuOpen.value = false;
 };
+
+const handleLogout = async () => {
+  const result = await authStore.logout();
+
+  if (result.success) {
+    isAuthenticated.value = false;
+    userData.value = null;
+    router.push("/");
+  }
+  isMenuOpen.value = false;
+};
+
+// Check authentication status on mount and watch for changes
+onMounted(async () => {
+  await checkAuthStatus();
+});
+
+// Function to check auth status
+const checkAuthStatus = async () => {
+  isAuthenticated.value = await authStore.isAuthenticated();
+  if (isAuthenticated.value) {
+    await authStore.getUserInformation();
+    userData.value = authStore.userData;
+  } else {
+    userData.value = null;
+  }
+};
+
+// Update auth status when route changes (for real-time updates)
+router.afterEach(async () => {
+  await checkAuthStatus();
+});
 </script>
 
 <template>
@@ -35,24 +71,46 @@ const navigateTo = (routeName) => {
               >
                 Home
               </button>
-              <button
-                @click="navigateTo('dashboard')"
-                class="text-gray-800 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
-              >
-                Dashboard
-              </button>
-              <button
-                @click="navigateTo('login')"
-                class="text-gray-800 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
-              >
-                Login
-              </button>
-              <button
-                @click="navigateTo('register')"
-                class="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
-              >
-                Get Started
-              </button>
+
+              <!-- Authenticated Navigation -->
+              <template v-if="isAuthenticated">
+                <button
+                  @click="navigateTo('dashboard')"
+                  class="text-gray-800 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                >
+                  Dashboard
+                </button>
+
+                <!-- User Profile Dropdown -->
+                <div class="relative">
+                  <span class="text-gray-800 px-3 py-2 text-sm font-medium">
+                    Welcome, {{ userData?.first_name || "User" }}
+                  </span>
+                </div>
+
+                <button
+                  @click="handleLogout"
+                  class="bg-red-600 text-white hover:bg-red-700 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                >
+                  Logout
+                </button>
+              </template>
+
+              <!-- Unauthenticated Navigation -->
+              <template v-else>
+                <button
+                  @click="navigateTo('login')"
+                  class="text-gray-800 hover:text-blue-600 px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                >
+                  Login
+                </button>
+                <button
+                  @click="navigateTo('register')"
+                  class="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
+                >
+                  Get Started
+                </button>
+              </template>
             </div>
           </div>
 
@@ -98,24 +156,43 @@ const navigateTo = (routeName) => {
             >
               Home
             </button>
-            <button
-              @click="navigateTo('dashboard')"
-              class="text-gray-800 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium w-full text-left transition-colors duration-200"
-            >
-              Dashboard
-            </button>
-            <button
-              @click="navigateTo('login')"
-              class="text-gray-800 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium w-full text-left transition-colors duration-200"
-            >
-              Login
-            </button>
-            <button
-              @click="navigateTo('register')"
-              class="bg-blue-600 text-white hover:bg-blue-700 block px-3 py-2 rounded-md text-base font-medium w-full text-left transition-colors duration-200"
-            >
-              Get Started
-            </button>
+
+            <!-- Authenticated Mobile Navigation -->
+            <template v-if="isAuthenticated">
+              <button
+                @click="navigateTo('dashboard')"
+                class="text-gray-800 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium w-full text-left transition-colors duration-200"
+              >
+                Dashboard
+              </button>
+
+              <div class="px-3 py-2 text-base font-medium text-gray-800">
+                Welcome, {{ userData?.first_name || "User" }}
+              </div>
+
+              <button
+                @click="handleLogout"
+                class="bg-red-600 text-white hover:bg-red-700 block px-3 py-2 rounded-md text-base font-medium w-full text-left transition-colors duration-200"
+              >
+                Logout
+              </button>
+            </template>
+
+            <!-- Unauthenticated Mobile Navigation -->
+            <template v-else>
+              <button
+                @click="navigateTo('login')"
+                class="text-gray-800 hover:text-blue-600 block px-3 py-2 rounded-md text-base font-medium w-full text-left transition-colors duration-200"
+              >
+                Login
+              </button>
+              <button
+                @click="navigateTo('register')"
+                class="bg-blue-600 text-white hover:bg-blue-700 block px-3 py-2 rounded-md text-base font-medium w-full text-left transition-colors duration-200"
+              >
+                Get Started
+              </button>
+            </template>
           </div>
         </div>
       </div>

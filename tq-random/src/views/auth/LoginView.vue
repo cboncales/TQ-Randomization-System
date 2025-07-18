@@ -1,24 +1,113 @@
 <script setup>
 import AppLayout from "@/components/layout/AppLayout.vue";
 import { ref } from "vue";
+import { useRouter } from "vue-router";
+import { useAuthUserStore } from "@/stores/authUser";
+
+const router = useRouter();
+const authStore = useAuthUserStore();
 
 const email = ref("");
 const password = ref("");
 const rememberMe = ref(false);
+const isLoading = ref(false);
+const errorMessage = ref("");
+const successMessage = ref("");
 
-// Placeholder functions for form handling
-const handleLogin = () => {
-  console.log("Login form submitted:", {
-    email: email.value,
-    password: password.value,
-    rememberMe: rememberMe.value,
-  });
-  // Add login functionality here later
+// Handle login form submission
+const handleLogin = async () => {
+  // Clear previous messages
+  errorMessage.value = "";
+  successMessage.value = "";
+
+  // Validate form
+  if (!email.value.trim() || !password.value.trim()) {
+    errorMessage.value = "Please fill in all required fields";
+    return;
+  }
+
+  if (!isValidEmail(email.value)) {
+    errorMessage.value = "Please enter a valid email address";
+    return;
+  }
+
+  isLoading.value = true;
+
+  try {
+    const result = await authStore.login(email.value.trim(), password.value);
+
+    if (result.error) {
+      errorMessage.value = result.error;
+    } else {
+      successMessage.value = "Login successful! Redirecting to dashboard...";
+      // Redirect to dashboard after successful login
+      setTimeout(() => {
+        router.push("/dashboard");
+      }, 1500);
+    }
+  } catch (error) {
+    errorMessage.value = "An unexpected error occurred. Please try again.";
+    console.error("Login error:", error);
+  } finally {
+    isLoading.value = false;
+  }
 };
 
-const handleGoogleLogin = () => {
-  console.log("Google login clicked");
-  // Add Google login functionality here later
+// Handle Google login
+const handleGoogleLogin = async () => {
+  errorMessage.value = "";
+  isLoading.value = true;
+
+  try {
+    const result = await authStore.signInWithGoogle();
+
+    if (result.error) {
+      errorMessage.value = result.error;
+    }
+    // Google OAuth will handle the redirect automatically
+  } catch (error) {
+    errorMessage.value = "Failed to sign in with Google. Please try again.";
+    console.error("Google login error:", error);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// Handle forgot password
+const handleForgotPassword = async () => {
+  if (!email.value.trim()) {
+    errorMessage.value = "Please enter your email address first";
+    return;
+  }
+
+  if (!isValidEmail(email.value)) {
+    errorMessage.value = "Please enter a valid email address";
+    return;
+  }
+
+  isLoading.value = true;
+  errorMessage.value = "";
+
+  try {
+    const result = await authStore.resetPassword(email.value.trim());
+
+    if (result.error) {
+      errorMessage.value = result.error;
+    } else {
+      successMessage.value = "Password reset email sent! Check your inbox.";
+    }
+  } catch (error) {
+    errorMessage.value = "Failed to send reset email. Please try again.";
+    console.error("Reset password error:", error);
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// Email validation helper
+const isValidEmail = (email) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return emailRegex.test(email);
 };
 </script>
 
@@ -60,6 +149,56 @@ const handleGoogleLogin = () => {
           </p>
         </div>
 
+        <!-- Error Message -->
+        <div
+          v-if="errorMessage"
+          class="bg-red-50 border border-red-200 rounded-md p-4"
+        >
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg
+                class="h-5 w-5 text-red-400"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-red-800">{{ errorMessage }}</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Success Message -->
+        <div
+          v-if="successMessage"
+          class="bg-green-50 border border-green-200 rounded-md p-4"
+        >
+          <div class="flex">
+            <div class="flex-shrink-0">
+              <svg
+                class="h-5 w-5 text-green-400"
+                fill="currentColor"
+                viewBox="0 0 20 20"
+              >
+                <path
+                  fill-rule="evenodd"
+                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                  clip-rule="evenodd"
+                />
+              </svg>
+            </div>
+            <div class="ml-3">
+              <p class="text-sm text-green-800">{{ successMessage }}</p>
+            </div>
+          </div>
+        </div>
+
         <form class="mt-8 space-y-6" @submit.prevent="handleLogin">
           <div class="rounded-md shadow-sm space-y-4">
             <div>
@@ -73,7 +212,8 @@ const handleGoogleLogin = () => {
                 type="email"
                 autocomplete="email"
                 required
-                class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                :disabled="isLoading"
+                class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="Enter your email"
               />
             </div>
@@ -90,7 +230,8 @@ const handleGoogleLogin = () => {
                 type="password"
                 autocomplete="current-password"
                 required
-                class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                :disabled="isLoading"
+                class="mt-1 appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm disabled:bg-gray-100 disabled:cursor-not-allowed"
                 placeholder="Enter your password"
               />
             </div>
@@ -103,7 +244,8 @@ const handleGoogleLogin = () => {
                 v-model="rememberMe"
                 name="remember-me"
                 type="checkbox"
-                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                :disabled="isLoading"
+                class="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded disabled:cursor-not-allowed"
               />
               <label for="remember-me" class="ml-2 block text-sm text-gray-900">
                 Remember me
@@ -111,18 +253,51 @@ const handleGoogleLogin = () => {
             </div>
 
             <div class="text-sm">
-              <a href="#" class="font-medium text-blue-600 hover:text-blue-500">
+              <button
+                type="button"
+                @click="handleForgotPassword"
+                :disabled="isLoading"
+                class="font-medium text-blue-600 hover:text-blue-500 disabled:text-gray-400 disabled:cursor-not-allowed"
+              >
                 Forgot your password?
-              </a>
+              </button>
             </div>
           </div>
 
           <div class="space-y-4">
             <button
               type="submit"
-              class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200"
+              :disabled="isLoading"
+              class="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors duration-200 disabled:bg-gray-400 disabled:cursor-not-allowed"
             >
-              <span class="absolute left-0 inset-y-0 flex items-center pl-3">
+              <span
+                v-if="isLoading"
+                class="absolute left-0 inset-y-0 flex items-center pl-3"
+              >
+                <svg
+                  class="h-5 w-5 text-blue-300 animate-spin"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <circle
+                    class="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    stroke-width="4"
+                  ></circle>
+                  <path
+                    class="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  ></path>
+                </svg>
+              </span>
+              <span
+                v-else
+                class="absolute left-0 inset-y-0 flex items-center pl-3"
+              >
                 <svg
                   class="h-5 w-5 text-blue-500 group-hover:text-blue-400"
                   fill="currentColor"
@@ -135,7 +310,7 @@ const handleGoogleLogin = () => {
                   />
                 </svg>
               </span>
-              Sign in
+              {{ isLoading ? "Signing in..." : "Sign in" }}
             </button>
 
             <div class="relative">
@@ -152,7 +327,8 @@ const handleGoogleLogin = () => {
             <button
               type="button"
               @click="handleGoogleLogin"
-              class="w-full flex justify-center items-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors duration-200"
+              :disabled="isLoading"
+              class="w-full flex justify-center items-center py-2 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors duration-200 disabled:bg-gray-100 disabled:cursor-not-allowed"
             >
               <svg class="w-5 h-5 mr-2" viewBox="0 0 24 24">
                 <path
@@ -172,7 +348,7 @@ const handleGoogleLogin = () => {
                   d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
                 />
               </svg>
-              Sign in with Google
+              {{ isLoading ? "Loading..." : "Sign in with Google" }}
             </button>
           </div>
         </form>

@@ -26,19 +26,19 @@ export const routes = [
     path: "/dashboard",
     name: "dashboard",
     component: () => import("@/views/DashboardView.vue"),
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: true },
   },
   {
     path: "/dashboard/test/:testId/questions",
     name: "question-management",
     component: () => import("@/views/QuestionManagementView.vue"),
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: true },
   },
   {
     path: "/dashboard/test/:testId/edit",
     name: "edit-test",
     component: () => import("@/views/auth/LoginView.vue"), // Placeholder - create EditTestView later
-    meta: { requiresAuth: false },
+    meta: { requiresAuth: true },
   },
 
   // Error Pages
