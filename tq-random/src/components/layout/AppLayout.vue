@@ -42,6 +42,7 @@ const navigateTo = (routeName) => {
                 Login
               </button>
               <button
+                @click="navigateTo('register')"
                 class="bg-blue-600 text-white hover:bg-blue-700 px-4 py-2 rounded-md text-sm font-medium transition-colors duration-200"
               >
                 Get Started

@@ -11,7 +11,13 @@ export const routes = [
   {
     path: "/login",
     name: "login",
-    component: HomePage, // Temporarily using HomePage - you'll want to create a proper login component
+    component: () => import("@/views/auth/LoginView.vue"),
+    meta: { requiresAuth: false },
+  },
+  {
+    path: "/register",
+    name: "register",
+    component: () => import("@/views/auth/RegisterView.vue"),
     meta: { requiresAuth: false },
   },
 
