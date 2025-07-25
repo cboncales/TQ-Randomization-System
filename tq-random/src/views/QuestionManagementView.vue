@@ -4,11 +4,11 @@ import QuestionForm from "@/components/dashboard/QuestionForm.vue";
 import QuestionList from "@/components/dashboard/QuestionList.vue";
 import { ref, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { useAuthUserStore } from "@/stores/authUser";
+import { useTestStore } from "@/stores/testStore";
 
 const route = useRoute();
 const router = useRouter();
-const authStore = useAuthUserStore();
+const testStore = useTestStore();
 
 const testId = parseInt(route.params.testId);
 const showQuestionForm = ref(false);
@@ -42,7 +42,7 @@ const handleQuestionSaved = async (questionData) => {
   try {
     if (editingQuestion.value) {
       // Update existing question
-      const result = await authStore.updateQuestion(
+      const result = await testStore.updateQuestion(
         editingQuestion.value.id,
         questionData.question,
         questionData.options.filter((opt) => opt.text.trim())
@@ -57,7 +57,7 @@ const handleQuestionSaved = async (questionData) => {
       }
     } else {
       // Add new question
-      const result = await authStore.createQuestion(
+      const result = await testStore.createQuestion(
         testId,
         questionData.question,
         questionData.options.filter((opt) => opt.text.trim())
@@ -81,7 +81,7 @@ const handleQuestionSaved = async (questionData) => {
 
 const handleQuestionDeleted = async (questionId) => {
   try {
-    const result = await authStore.deleteQuestion(questionId);
+    const result = await testStore.deleteQuestion(questionId);
 
     if (result.error) {
       alert(`Error deleting question: ${result.error}`);
@@ -96,7 +96,7 @@ const handleQuestionDeleted = async (questionId) => {
 
 const loadTest = async () => {
   try {
-    const result = await authStore.getTest(testId);
+    const result = await testStore.getTest(testId);
 
     if (result.error) {
       errorMessage.value = result.error;
@@ -122,7 +122,7 @@ const loadTest = async () => {
 
 const loadQuestions = async () => {
   try {
-    const result = await authStore.getTestQuestions(testId);
+    const result = await testStore.getTestQuestions(testId);
 
     if (result.error) {
       errorMessage.value = result.error;
