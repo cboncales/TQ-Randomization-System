@@ -3,9 +3,9 @@ import AppLayout from "@/components/layout/AppLayout.vue";
 import TestList from "@/components/dashboard/TestList.vue";
 import CreateTestModal from "@/components/dashboard/CreateTestModal.vue";
 import { ref, onMounted } from "vue";
-import { useAuthUserStore } from "@/stores/authUser";
+import { useTestStore } from "@/stores/testStore";
 
-const authStore = useAuthUserStore();
+const testStore = useTestStore();
 
 const showCreateModal = ref(false);
 const tests = ref([]);
@@ -31,7 +31,7 @@ const handleTestCreated = (newTest) => {
 
 const handleTestDeleted = async (testId) => {
   try {
-    const result = await authStore.deleteTest(testId);
+    const result = await testStore.deleteTest(testId);
 
     if (result.error) {
       alert(`Error deleting test: ${result.error}`);
@@ -49,7 +49,7 @@ const loadTests = async () => {
     isLoading.value = true;
     errorMessage.value = "";
 
-    const result = await authStore.getUserTests();
+    const result = await testStore.getUserTests();
 
     if (result.error) {
       errorMessage.value = result.error;

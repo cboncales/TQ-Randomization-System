@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from "vue";
-import { useAuthUserStore } from "@/stores/authUser";
+import { useTestStore } from "@/stores/testStore";
 
 const props = defineProps({
   isOpen: {
@@ -11,7 +11,7 @@ const props = defineProps({
 
 const emit = defineEmits(["close", "test-created"]);
 
-const authStore = useAuthUserStore();
+const testStore = useTestStore();
 
 const title = ref("");
 const subject = ref("");
@@ -50,7 +50,7 @@ const handleSubmit = async () => {
       subject.value.trim() +
       (description.value.trim() ? ` - ${description.value.trim()}` : "");
 
-    const result = await authStore.createTest(title.value, fullDescription);
+    const result = await testStore.createTest(title.value, fullDescription);
 
     if (result.error) {
       errorMessage.value = result.error;
