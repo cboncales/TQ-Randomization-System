@@ -20,6 +20,12 @@ export const routes = [
     component: () => import("@/views/auth/RegisterView.vue"),
     meta: { requiresAuth: false },
   },
+  {
+    path: "/auth/callback",
+    name: "auth-callback",
+    component: () => import("@/views/auth/AuthCallbackView.vue"),
+    meta: { requiresAuth: false },
+  },
 
   // Dashboard Routes (Protected)
   {
