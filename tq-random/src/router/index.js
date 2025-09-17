@@ -47,7 +47,17 @@ router.beforeEach(async (to) => {
 
   // If logged in, check user roles for restricted routes
   if (isLoggedIn) {
-    await authUser.getUserInformation();
+    const result = await authUser.getUserInformation();
+
+    // If getting user information failed, redirect to login
+    if (result?.error) {
+      console.warn(
+        "User information retrieval failed, redirecting to login:",
+        result.error
+      );
+      return { name: "login" };
+    }
+
     const isAdmin = authUser.userData?.is_admin || false;
 
     // Restrict access to admin-only routes

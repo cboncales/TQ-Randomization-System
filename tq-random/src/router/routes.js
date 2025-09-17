@@ -43,7 +43,7 @@ export const routes = [
   {
     path: "/dashboard/test/:testId/edit",
     name: "edit-test",
-    component: () => import("@/views/auth/LoginView.vue"), // Placeholder - create EditTestView later
+    component: () => import("@/views/EditTestView.vue"),
     meta: { requiresAuth: true },
   },
 
