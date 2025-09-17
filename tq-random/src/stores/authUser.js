@@ -24,32 +24,61 @@ export const useAuthUserStore = defineStore("authUser", () => {
   // Actions
   // Retrieve User Session if Logged
   async function isAuthenticated() {
-    const { data, error } = await supabase.auth.getSession();
+    try {
+      const { data, error } = await supabase.auth.getSession();
 
-    if (error) {
-      console.error("Error getting session:", error.message);
+      if (error) {
+        console.error("Error getting session:", error.message);
+        $reset();
+        return false;
+      }
+
+      if (data.session && data.session.user) {
+        const { id, email, user_metadata } = data.session.user;
+        userData.value = { id, email, ...user_metadata };
+        return true;
+      } else {
+        // No session or no user - reset state
+        $reset();
+        return false;
+      }
+    } catch (error) {
+      console.error("Unexpected error checking authentication:", error);
+      $reset();
       return false;
     }
-
-    if (data.session) {
-      const { id, email, user_metadata } = data.session.user;
-      userData.value = { id, email, ...user_metadata };
-    }
-
-    return !!data.session;
   }
 
   // Retrieve User Information
   async function getUserInformation() {
-    const {
-      data: {
-        // Retrieve Id, Email and Metadata thru Destructuring
-        user: { id, email, user_metadata },
-      },
-    } = await supabase.auth.getUser();
+    try {
+      const { data, error } = await supabase.auth.getUser();
 
-    // Set the retrieved information to state
-    userData.value = { id, email, ...user_metadata };
+      if (error) {
+        console.error("Error getting user:", error.message);
+        // Reset state on error
+        $reset();
+        return { error: error.message };
+      }
+
+      if (!data.user) {
+        console.warn("No user found - session may have expired");
+        // Reset state if no user
+        $reset();
+        return { error: "User session not found" };
+      }
+
+      const { id, email, user_metadata } = data.user;
+
+      // Set the retrieved information to state
+      userData.value = { id, email, ...user_metadata };
+
+      return { data: userData.value };
+    } catch (error) {
+      console.error("Unexpected error getting user information:", error);
+      $reset();
+      return { error: error.message };
+    }
   }
 
   // Retrieve User Roles Pages
@@ -190,7 +219,7 @@ export const useAuthUserStore = defineStore("authUser", () => {
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options: {
+        options:
           redirectTo: `https://tqrandom.vercel.app/dashboard`,
         },
       });

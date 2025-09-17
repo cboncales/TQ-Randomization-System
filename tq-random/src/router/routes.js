@@ -20,6 +20,12 @@ export const routes = [
     component: () => import("@/views/auth/RegisterView.vue"),
     meta: { requiresAuth: false },
   },
+  {
+    path: "/auth/callback",
+    name: "auth-callback",
+    component: () => import("@/views/auth/AuthCallbackView.vue"),
+    meta: { requiresAuth: false },
+  },
 
   // Dashboard Routes (Protected)
   {
@@ -37,7 +43,7 @@ export const routes = [
   {
     path: "/dashboard/test/:testId/edit",
     name: "edit-test",
-    component: () => import("@/views/auth/LoginView.vue"), // Placeholder - create EditTestView later
+    component: () => import("@/views/EditTestView.vue"),
     meta: { requiresAuth: true },
   },
 
