@@ -219,7 +219,7 @@ export const useAuthUserStore = defineStore("authUser", () => {
     try {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
-        options:
+        options: {
           redirectTo: `https://tqrandom.vercel.app/dashboard`,
         },
       });
