@@ -1,6 +1,8 @@
 import { computed, ref } from "vue";
 import { defineStore } from "pinia";
 import { supabase } from "@/utils/supabase";
+import { account } from "@/utils/supabase";
+import { OAuthProvider } from "@/utils/supabase";
 
 export const useAuthUserStore = defineStore("authUser", () => {
   // States
@@ -191,7 +193,7 @@ export const useAuthUserStore = defineStore("authUser", () => {
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo: `${window.location.origin}/dashboard`,
+          redirectTo: `https://tqrandom.vercel.app/dashboard`,
         },
       });
 
