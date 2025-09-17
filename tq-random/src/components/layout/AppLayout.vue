@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from "vue";
+import { ref, onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useAuthUserStore } from "@/stores/authUser";
 
@@ -40,6 +40,8 @@ const checkAuthStatus = async () => {
   if (isAuthenticated.value) {
     await authStore.getUserInformation();
     userData.value = authStore.userData;
+    // Debug: Log user data to see what's available
+    console.log("User data:", userData.value);
   } else {
     userData.value = null;
   }
@@ -48,6 +50,33 @@ const checkAuthStatus = async () => {
 // Update auth status when route changes (for real-time updates)
 router.afterEach(async () => {
   await checkAuthStatus();
+});
+
+// Computed property to get user's display name from various sources
+const userDisplayName = computed(() => {
+  if (!userData.value) return "User";
+
+  // For Google OAuth users: use full_name or name
+  if (userData.value.full_name) {
+    return userData.value.full_name.split(" ")[0]; // Get first name from full name
+  }
+
+  // For regular email/password users: use first_name
+  if (userData.value.first_name) {
+    return userData.value.first_name;
+  }
+
+  // For Google OAuth: use name field
+  if (userData.value.name) {
+    return userData.value.name.split(" ")[0]; // Get first name from name
+  }
+
+  // Fallback to email username
+  if (userData.value.email) {
+    return userData.value.email.split("@")[0];
+  }
+
+  return "User";
 });
 </script>
 
@@ -84,7 +113,7 @@ router.afterEach(async () => {
                 <!-- User Profile Dropdown -->
                 <div class="relative">
                   <span class="text-gray-800 px-3 py-2 text-sm font-medium">
-                    Welcome, {{ userData?.first_name || "User" }}
+                    Welcome, {{ userDisplayName }}
                   </span>
                 </div>
 
@@ -167,7 +196,7 @@ router.afterEach(async () => {
               </button>
 
               <div class="px-3 py-2 text-base font-medium text-gray-800">
-                Welcome, {{ userData?.first_name || "User" }}
+                Welcome, {{ userDisplayName }}
               </div>
 
               <button
