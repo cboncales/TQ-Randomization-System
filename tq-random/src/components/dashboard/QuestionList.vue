@@ -120,7 +120,7 @@ const getCorrectAnswers = (options) => {
 
                   <!-- Correct Answer Summary -->
                   <div class="mt-3 text-sm text-gray-600">
-                    <strong>Correct answer(s):</strong>
+                    <strong>Correct answer(s): </strong>
                     <span class="text-green-600 font-medium">
                       {{
                         getCorrectAnswers(question.options)

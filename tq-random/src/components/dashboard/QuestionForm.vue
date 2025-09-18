@@ -51,11 +51,20 @@ const resetForm = () => {
 watch(
   () => props.editingQuestion,
   (newQuestion) => {
+    console.log("QuestionForm: Editing question changed:", newQuestion);
     if (newQuestion) {
+      console.log(
+        "QuestionForm: Setting question text to:",
+        newQuestion.question
+      );
       questionText.value = newQuestion.question;
       questionType.value = newQuestion.type;
       options.value = [...newQuestion.options];
       paraphrases.value = [...(newQuestion.paraphrases || [])];
+      console.log(
+        "QuestionForm: Form populated with question text:",
+        questionText.value
+      );
     } else {
       resetForm();
     }
@@ -158,7 +167,7 @@ const hasCorrectAnswer = () => {
       <!-- Header -->
       <div class="flex justify-between items-center mb-6">
         <h3 class="text-lg font-medium text-gray-900">
-          {{ editingQuestion ? "Edit Question" : "Add New Question" }}
+          {{ props.editingQuestion ? "Edit Question" : "Add New Question" }}
         </h3>
         <button
           @click="closeModal"
