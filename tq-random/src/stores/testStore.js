@@ -492,12 +492,16 @@ export const useTestStore = defineStore("testStore", () => {
       // Try to check if correct answer already exists for this question
       let existingAnswer = null;
       try {
-        const { data } = await supabase
+        const { data, error } = await supabase
           .from("answers")
           .select("id")
-          .eq("question_id", questionId)
-          .single();
-        existingAnswer = data;
+          .eq("question_id", questionId);
+
+        if (error) {
+          console.log("Error checking for existing answer:", error.message);
+        } else if (data && data.length > 0) {
+          existingAnswer = data[0]; // Take the first one if multiple exist
+        }
       } catch (error) {
         // If we can't check (e.g., due to RLS policies), assume no existing answer
         console.log(
@@ -513,8 +517,12 @@ export const useTestStore = defineStore("testStore", () => {
           .from("answers")
           .update({ answer_choices_id: answerChoiceId })
           .eq("id", existingAnswer.id)
-          .select()
-          .single();
+          .select();
+
+        // Handle the array result from update
+        if (result.data && result.data.length > 0) {
+          result.data = result.data[0];
+        }
       } else {
         // Create new correct answer record
         console.log("Creating new answer record");
@@ -526,8 +534,12 @@ export const useTestStore = defineStore("testStore", () => {
               answer_choices_id: answerChoiceId,
             },
           ])
-          .select()
-          .single();
+          .select();
+
+        // Handle the array result from insert
+        if (result.data && result.data.length > 0) {
+          result.data = result.data[0];
+        }
       }
 
       if (result.error) {
