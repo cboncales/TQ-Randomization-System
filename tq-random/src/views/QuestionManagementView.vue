@@ -81,7 +81,6 @@ const editQuestion = async (question) => {
     editingQuestion.value = {
       id: question.id,
       question: question.question || question.text, // Use question.question if available, fallback to question.text
-      type: "multiple-choice",
       options: options,
       paraphrases: [], // Add paraphrases support later if needed
     };

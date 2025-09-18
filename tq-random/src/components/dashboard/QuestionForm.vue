@@ -22,7 +22,6 @@ const errorMessage = ref("");
 
 // Form data
 const questionText = ref("");
-const questionType = ref("multiple-choice");
 const options = ref([
   { id: 1, text: "", isCorrect: false },
   { id: 2, text: "", isCorrect: false },
@@ -35,7 +34,6 @@ const newParaphrase = ref("");
 // Reset form function
 const resetForm = () => {
   questionText.value = "";
-  questionType.value = "multiple-choice";
   options.value = [
     { id: 1, text: "", isCorrect: false },
     { id: 2, text: "", isCorrect: false },
@@ -58,7 +56,6 @@ watch(
         newQuestion.question
       );
       questionText.value = newQuestion.question;
-      questionType.value = newQuestion.type;
       options.value = [...newQuestion.options];
       paraphrases.value = [...(newQuestion.paraphrases || [])];
       console.log(
@@ -70,6 +67,20 @@ watch(
     }
   },
   { immediate: true }
+);
+
+// Watch for modal opening (when isOpen becomes true) to reset form for new questions
+watch(
+  () => props.isOpen,
+  (isOpen) => {
+    if (isOpen && !props.editingQuestion) {
+      // Modal opened for new question (not editing), reset the form
+      console.log(
+        "QuestionForm: Modal opened for new question, resetting form"
+      );
+      resetForm();
+    }
+  }
 );
 
 const addOption = () => {
@@ -115,28 +126,23 @@ const handleSubmit = () => {
     return;
   }
 
-  if (questionType.value === "multiple-choice") {
-    const filledOptions = options.value.filter((opt) => opt.text.trim());
-    if (filledOptions.length < 2) {
-      errorMessage.value = "Please provide at least 2 answer options";
-      return;
-    }
+  const filledOptions = options.value.filter((opt) => opt.text.trim());
+  if (filledOptions.length < 2) {
+    errorMessage.value = "Please provide at least 2 answer options";
+    return;
+  }
 
-    const correctAnswers = filledOptions.filter((opt) => opt.isCorrect);
-    if (correctAnswers.length === 0) {
-      errorMessage.value = "Please mark at least one correct answer";
-      return;
-    }
+  const correctAnswers = filledOptions.filter((opt) => opt.isCorrect);
+  if (correctAnswers.length === 0) {
+    errorMessage.value = "Please mark at least one correct answer";
+    return;
   }
 
   // Prepare question data
   const questionData = {
     question: questionText.value.trim(),
-    type: questionType.value,
-    options:
-      questionType.value === "multiple-choice"
-        ? options.value.filter((opt) => opt.text.trim())
-        : [],
+    type: "multiple-choice",
+    options: options.value.filter((opt) => opt.text.trim()),
     paraphrases: [...paraphrases.value],
   };
 
@@ -236,26 +242,8 @@ const hasCorrectAnswer = () => {
           />
         </div>
 
-        <!-- Question Type -->
-        <div>
-          <label
-            for="question-type"
-            class="block text-sm font-medium text-gray-700 mb-2"
-          >
-            Question Type
-          </label>
-          <select
-            id="question-type"
-            v-model="questionType"
-            class="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-          >
-            <option value="multiple-choice">Multiple Choice</option>
-            <!-- Add other types later if needed -->
-          </select>
-        </div>
-
         <!-- Multiple Choice Options -->
-        <div v-if="questionType === 'multiple-choice'">
+        <div>
           <div class="flex justify-between items-center mb-4">
             <h4 class="text-sm font-medium text-gray-700">Answer Options</h4>
             <button
